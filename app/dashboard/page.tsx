@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { DashboardStats } from "@/components/dashboard/dashboard-stats";
 import { RecentBookings } from "@/components/dashboard/recent-bookings";
 import { RevenueChart } from "@/components/dashboard/revenue-chart";
+import { PaymentsSummary } from "@/components/dashboard/payments-summary";
+import { Bus } from "lucide-react";
 
 export default async function DashboardPage() {
   const supabase = await getSupabaseServerClient();
@@ -24,6 +26,8 @@ export default async function DashboardPage() {
       </div>
 
       <DashboardStats />
+
+      <PaymentsSummary />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <RevenueChart />
