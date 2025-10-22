@@ -1,8 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Bar,
+  BarChart,
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
+  Tooltip,
+} from "recharts";
 import { Loader2 } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -44,7 +57,7 @@ export function RevenueChart() {
 
       const { data: payments, error } = await supabase
         .from("payments")
-        .select("amount, created_at")
+        .select("amount, created_at, status")
         .eq("business_id", business.id)
         .eq("status", "completed")
         .gte("created_at", sevenDaysAgo.toISOString())
@@ -57,33 +70,44 @@ export function RevenueChart() {
 
       // Group payments by day
       const revenueByDay: { [key: string]: number } = {};
-      
+
       // Initialize all 7 days with 0 revenue
       for (let i = 6; i >= 0; i--) {
         const date = new Date();
         date.setDate(date.getDate() - i);
-        const dateKey = date.toISOString().split('T')[0];
+        const dateKey = date.toISOString().split("T")[0];
         revenueByDay[dateKey] = 0;
       }
 
       // Add actual revenue data
-      payments?.forEach((payment) => {
-        const date = new Date(payment.created_at).toISOString().split('T')[0];
-        if (revenueByDay[date] !== undefined) {
-          revenueByDay[date] += payment.amount;
+      payments?.forEach((payment: any) => {
+        if (!payment || !payment.created_at) return;
+        const dateKey = new Date(payment.created_at)
+          .toISOString()
+          .split("T")[0];
+        // parse numeric string safely to number (fallback 0)
+        const amountNum =
+          payment.amount == null ? 0 : parseFloat(String(payment.amount)) || 0;
+        if (revenueByDay[dateKey] !== undefined) {
+          revenueByDay[dateKey] += amountNum;
+        } else {
+          // optional: include out-of-range dates by summing them too
+          revenueByDay[dateKey] = amountNum;
         }
       });
 
       // Convert to chart data format
-      const chartData: RevenueData[] = Object.entries(revenueByDay).map(([date, revenue]) => {
-        const day = new Date(date);
-        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        return {
-          name: dayNames[day.getDay()],
-          revenue: Math.round(revenue * 100) / 100, // Round to 2 decimal places
-          date: date,
-        };
-      });
+      const chartData: RevenueData[] = Object.entries(revenueByDay).map(
+        ([date, revenue]) => {
+          const day = new Date(date);
+          const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+          return {
+            name: dayNames[day.getDay()],
+            revenue: Math.round(revenue * 100) / 100, // Round to 2 decimal places
+            date: date,
+          };
+        }
+      );
 
       setData(chartData);
     } catch (error) {
@@ -116,12 +140,12 @@ export function RevenueChart() {
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={data}>
-            <XAxis 
-              dataKey="name" 
-              stroke="#888888" 
-              fontSize={12} 
-              tickLine={false} 
-              axisLine={false} 
+            <XAxis
+              dataKey="name"
+              stroke="#888888"
+              fontSize={12}
+              tickLine={false}
+              axisLine={false}
             />
             <YAxis
               stroke="#888888"
@@ -137,7 +161,7 @@ export function RevenueChart() {
                 borderRadius: "8px",
               }}
               labelStyle={{ color: "hsl(var(--foreground))" }}
-              formatter={(value: number) => [`GH₵ ${value}`, 'Revenue']}
+              formatter={(value: number) => [`GH₵ ${value}`, "Revenue"]}
               labelFormatter={(label, payload) => {
                 if (payload && payload[0]) {
                   return `${payload[0].payload.date} (${label})`;
@@ -145,10 +169,10 @@ export function RevenueChart() {
                 return label;
               }}
             />
-            <Bar 
-              dataKey="revenue" 
-              fill="hsl(var(--primary))" 
-              radius={[8, 8, 0, 0]} 
+            <Bar
+              dataKey="revenue"
+              fill="hsl(var(--primary))"
+              radius={[8, 8, 0, 0]}
             />
           </BarChart>
         </ResponsiveContainer>
